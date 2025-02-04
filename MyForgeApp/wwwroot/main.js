@@ -1,10 +1,103 @@
 ﻿import { initViewer, loadModel } from './viewer.js';
 
-initViewer(document.getElementById('preview')).then(viewer => {
-    const urn = window.location.hash?.substring(1);
-    setupModelSelection(viewer, urn);
-    setupModelUpload(viewer);
+const viewer = await initViewer(document.getElementById('preview'))
+const urn = window.location.hash?.substring(1);
+setupModelSelection(viewer, urn);
+setupModelUpload(viewer);
+
+const customSceneIdentifier = 'custom-scene';
+document.getElementById("add-geom").addEventListener("click", function () {
+    const geom = new THREE.SphereGeometry(10, 10, 10);
+    const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const sphereMesh = new THREE.Mesh(geom, material);
+    sphereMesh.position.set(
+        Math.random() * 100 - 50,
+        Math.random() * 100 - 50,
+        0
+    );
+    if (!viewer.overlays.hasScene(customSceneIdentifier)) {
+        viewer.overlays.addScene(customSceneIdentifier);
+    }
+    viewer.overlays.addMesh(sphereMesh, customSceneIdentifier);
 });
+
+async function loadEdit2D(viewer) {
+    // Load Edit2D extension
+    const options = {
+        // If true, PolygonTool creates Paths instead of just Polygons. This lets you change segments to arcs.
+        enableArcs: true
+    };
+
+    const edit2d = await viewer.loadExtension('Autodesk.Edit2D');
+
+    // Register all standard tools in default configuration
+    edit2d.registerDefaultTools();
+
+    const ctx = edit2d.defaultContext;
+
+    // {EditLayer} Edit layer containing your shapes
+    ctx.layer
+
+    // {EditLayer} An additional layer used by tools to display temporary shapes (e.g. dashed lines for snapping etc.)
+    ctx.gizmoLayer
+
+    // {UndoStack} Manages all modifications and tracks undo/redo history
+    ctx.undoStack
+
+    // {Selection} Controls selection and hovering highlight
+    ctx.selection
+
+    // {Edit2DSnapper} Edit2D snapper
+    ctx.snapper
+
+    // Before action
+    ctx.undoStack.addEventListener(Autodesk.Edit2D.UndoStack.BEFORE_ACTION, () => {});
+
+    // After action
+    ctx.undoStack.addEventListener(Autodesk.Edit2D.UndoStack.BEFORE_ACTION, () => {});
+
+    // Register your handler
+    ctx.selection.addEventListener(Autodesk.Edit2D.Selection.Events.SELECTION_CHANGED, () => {});
+
+    // Update UI state on hover changes
+    ctx.selection.addEventListener(Autodesk.Edit2D.Selection.Events.SELECTION_HOVER_CHANGED, () => {});
+
+    // Apply your selection from UI
+    ctx.selection.selectOnly(myItem.shape);
+
+    // Sync Edit2D state on UI-hover events
+    ctx.selection.setHoverID(shape.id);
+
+    // Facilitate access to extension and layer
+    window.edit2d = NOP_VIEWER.getExtension('Autodesk.Edit2D');
+    window.layer = edit2d.defaultContext.layer;
+    window.tools = edit2d.defaultTools;
+
+    startTool(edit2d.defaultTools.polygonTool)
+}
+
+// Convenience function for tool switching per console. E.g. startTool(tools.polygonTool)
+var startTool = function (tool) {
+
+    var controller = NOP_VIEWER.toolController;
+
+    // Check if currently active tool is from Edit2D
+    var activeTool = controller.getActiveTool();
+    var isEdit2D = activeTool && activeTool.getName().startsWith("Edit2");
+
+    // deactivate any previous edit2d tool
+    if (isEdit2D) {
+        controller.deactivateTool(activeTool.getName());
+        activeTool = null;
+    }
+
+    // stop editing tools
+    if (!tool) {
+        return;
+    }
+
+    controller.activateTool(tool.getName());
+}
 
 async function setupModelSelection(viewer, selectedUrn) {
     const dropdown = document.getElementById('models');
